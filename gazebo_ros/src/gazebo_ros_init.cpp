@@ -22,6 +22,7 @@
 
 #include <gazebo_msgs/msg/performance_metrics.hpp>
 #include <gazebo_msgs/msg/sensor_performance_metric.hpp>
+#include <gazebo_msgs/srv/step_control.hpp>
 
 #include <gazebo_ros/conversions/builtin_interfaces.hpp>
 #include <gazebo_ros/node.hpp>
@@ -86,6 +87,13 @@ public:
     std_srvs::srv::Empty::Request::SharedPtr req,
     std_srvs::srv::Empty::Response::SharedPtr res);
 
+  /// Callback from ROS service to step physics.
+  /// \param[in] req Number of steps to take
+  /// \param[out] res Empty response
+  void StepControl(
+    const std::shared_ptr<gazebo_msgs::srv::StepControl::Request> req,
+    const std::shared_ptr<gazebo_msgs::srv::StepControl::Response> res);
+
 #ifdef GAZEBO_ROS_HAS_PERFORMANCE_METRICS
   /// \brief Subscriber callback for performance metrics. This will be send in the ROS network
   /// \param[in] msg Received PerformanceMetrics message
@@ -112,6 +120,9 @@ public:
 
   /// ROS service to handle requests to unpause physics.
   rclcpp::Service<std_srvs::srv::Empty>::SharedPtr unpause_service_;
+
+  /// ROS service for step-sized iterations
+  rclcpp::Service<gazebo_msgs::srv::StepControl>::SharedPtr step_control_service_;
 
   /// \brief ROS publisher to publish performance metrics.
   rclcpp::Publisher<gazebo_msgs::msg::PerformanceMetrics>::SharedPtr performance_metrics_pub_;
@@ -242,6 +253,12 @@ void GazeboRosInitPrivate::OnWorldCreated(const std::string & _world_name)
     std::bind(
       &GazeboRosInitPrivate::OnUnpause, this,
       std::placeholders::_1, std::placeholders::_2));
+    
+  step_control_service_ = ros_node_->create_service<gazebo_msgs::srv::StepControl>(
+    "step_control",
+    std::bind(
+      &GazeboRosInitPrivate::StepControl, this,
+      std::placeholders::_1, std::placeholders::_2));
 
 #ifdef GAZEBO_ROS_HAS_PERFORMANCE_METRICS
   // Initialize gazebo transport node
@@ -257,7 +274,7 @@ GazeboRosInitPrivate::GazeboRosInitPrivate()
 
 void GazeboRosInitPrivate::PublishSimTime(const gazebo::common::UpdateInfo & _info)
 {
-  if (!throttler_.IsReady(_info.realTime)) {
+  if (!throttler_.IsReady(_info.simTime)) {
     return;
   }
 
@@ -304,6 +321,13 @@ void GazeboRosInitPrivate::OnUnpause(
   std_srvs::srv::Empty::Response::SharedPtr)
 {
   world_->SetPaused(false);
+}
+
+void GazeboRosInitPrivate::StepControl(
+  const std::shared_ptr<gazebo_msgs::srv::StepControl::Request> req,
+  const std::shared_ptr<gazebo_msgs::srv::StepControl::Response>)
+{
+  world_->Step(req->steps);
 }
 
 GZ_REGISTER_SYSTEM_PLUGIN(GazeboRosInit)
