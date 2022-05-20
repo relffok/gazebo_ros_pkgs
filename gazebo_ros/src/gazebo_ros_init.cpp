@@ -143,7 +143,7 @@ public:
   gazebo::transport::NodePtr gz_node_;
 
   /// Default frequency for clock publisher.
-  static constexpr double DEFAULT_PUBLISH_FREQUENCY = 250.;
+  static constexpr double DEFAULT_PUBLISH_FREQUENCY = 100.;
 };
 
 GazeboRosInit::GazeboRosInit()
