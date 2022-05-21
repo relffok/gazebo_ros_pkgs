@@ -155,6 +155,8 @@ void GazeboRosStatePrivate::OnUpdate(const gazebo::common::UpdateInfo & _info)
     model_states.pose.push_back(pose);
     model_states.name.push_back(model->GetName());
 
+    link_states.stamp = Convert<builtin_interfaces::msg::Time>(world_->SimTime());
+
     geometry_msgs::msg::Twist twist;
     twist.linear = gazebo_ros::Convert<geometry_msgs::msg::Vector3>(model->WorldLinearVel());
     twist.angular = gazebo_ros::Convert<geometry_msgs::msg::Vector3>(model->WorldAngularVel());
